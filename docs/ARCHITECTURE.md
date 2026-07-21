@@ -131,7 +131,8 @@ flowchart TB
 - **前端**：Next.js (React) + TypeScript + Tailwind + Mapbox GL JS
 - **後端 API**：Python (FastAPI)（分析/ML 生態好）或 Node.js（TypeScript 全端一致性好）
 - **資料庫**：PostgreSQL + PostGIS + pgvector；Redis 快取
-- **LLM**：Claude，透過 tool calling 做查詢編排；評論摘要/情緒分析可用同一模型或輕量分類模型
+- **LLM（查詢編排層）**：Gemini（`gemini-flash-latest`），透過 function calling 做 NL → 結構化查詢；已驗證 API key 可用。評論摘要/情緒分析可用同一模型或輕量分類模型
+  - API key 走環境變數 `GEMINI_API_KEY`，只存在本機 `.env`（已加入 `.gitignore`，不進版本控制），範例見 `.env.example`
 - **ETL/排程**：簡單 cron job 起步，資料量大再上 Airflow 類工具
 - **部署**：先單一容器化服務（Docker）+ 雲端 Postgres，量體成長後再拆服務
 
