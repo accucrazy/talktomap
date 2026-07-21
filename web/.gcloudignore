@@ -1,0 +1,12 @@
+# Cloud Build 來源上傳排除清單（gcloud run deploy --source 會讀這個）
+.git
+node_modules
+.next
+npm-debug.log
+# 機密：絕不上傳
+.env
+.env.*
+!.env.example
+# 本機/文件
+deploy.sh
+deploy.ps1
