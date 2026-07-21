@@ -44,6 +44,14 @@ GOOGLE_MAPS_API_KEY=xxx \
 
 腳本會自動啟用 Cloud Run / Cloud Build / Artifact Registry API，從原始碼（`web/Dockerfile`，Next.js standalone 模式）建置並部署，完成後印出服務網址。可用 `REGION`（預設 `asia-southeast1`）與 `SERVICE`（預設 `talktomap`）覆寫。
 
+**Windows（PowerShell）** 用 `web/deploy.ps1`：
+
+```powershell
+.\web\deploy.ps1 -ProjectId 你的專案id -GeminiApiKey xxx -GoogleMapsApiKey xxx
+```
+
+此腳本會自動處理 `CLOUDSDK_PYTHON` 指到不存在 Python 的問題（未設定或路徑無效時改指向 Python 3.11 實際安裝路徑），且所有 gcloud 指令都帶明確 `--project`，不會誤部署到 gcloud config 目前設定的其他專案。
+
 兩把 key 以 Cloud Run 環境變數（`--set-env-vars`）於執行期注入，不會進到映像檔或版本控制。
 
 ## 專案結構
