@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f4f1;
+  --foreground: #1f2328;
+  /* 品牌色（沿用截圖深紅系） */
+  --brand: #b71c1c;
+  --brand-dark: #8e1515;
+  --brand-pink: #fce8e8;
+  /* 威脅層級配色 */
+  --threat-extreme: #c0392b;
+  --threat-high: #e74c3c;
+  --threat-medium: #f1c40f;
+  --threat-low: #27ae60;
+  --threat-target: #d81b60;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-pink: var(--brand-pink);
+  --color-threat-extreme: var(--threat-extreme);
+  --color-threat-high: var(--threat-high);
+  --color-threat-medium: var(--threat-medium);
+  --color-threat-low: var(--threat-low);
+  --color-threat-target: var(--threat-target);
+  --font-sans: var(--font-noto-sans-tc);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-noto-sans-tc), "Noto Sans TC", "PingFang TC",
+    "Microsoft JhengHei", sans-serif;
+}
+
+/* 對話訊息內的簡易排版 */
+.chat-md p {
+  margin: 0.35rem 0;
+}
+.chat-md ul {
+  margin: 0.35rem 0 0.35rem 1.1rem;
+  list-style: disc;
+}
+.chat-md li {
+  margin: 0.15rem 0;
+}
+.chat-md strong {
+  font-weight: 700;
+  color: var(--brand-dark);
+}

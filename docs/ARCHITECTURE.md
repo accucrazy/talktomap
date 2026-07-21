@@ -138,12 +138,12 @@ flowchart TB
 
 ## 7. 分階段路線圖
 
-1. **Phase 0（現在）**：架構規劃 ✅、定義資料 schema、種子資料集規劃
-2. **Phase 1**：靜態原型——用假資料/人工建檔資料還原截圖那種「比較表 + 地圖標註」畫面，驗證呈現層設計
+1. **Phase 0**：架構規劃 ✅、定義資料 schema ✅、種子資料集 ✅
+2. **Phase 1** ✅：儀表板原型——Google Map 標註（威脅色圖釘/半徑圈/InfoWindow）+ 商場比較表抽屜，種子示範資料（`web/`，Next.js 16 + @vis.gl/react-google-maps）
 3. **Phase 2**：串接 Google Places API 真實資料（評分/評論/營業時間），地圖圖釘動態化
-4. **Phase 3**：加上對話介面（NL → tool calling → 結果渲染），支援多輪追問
+4. **Phase 3** ✅（起步）：對話介面 + Gemini function calling（`gemini-flash-latest`），5 個分析工具（商場清單/商場資料/競品掃描/威脅分析/客流影響模型），回覆附地圖動作（focus/highlight/circle）同步操作地圖，支援多輪追問
 5. **Phase 4**：人流估算模組上線（先用代理指標），威脅評分模型上線
-6. **Phase 5**：銷售預測模型（Huff Model 起步），並根據真實案例回測調整
+6. **Phase 5**：銷售預測模型精修（目前已有簡化 Huff 引力模型示範版，位於 `web/src/lib/analysis.ts`），並根據真實案例回測調整
 
 ## 8. 待決問題
 

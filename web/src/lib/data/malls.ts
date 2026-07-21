@@ -1,0 +1,144 @@
+import type { Mall } from "../types";
+
+/**
+ * 示範種子資料：吉隆坡 Bukit Bintang / TRX 商圈商場競爭分析。
+ * 分析主體（target）為 LaLaport BBCC，其餘為競品，威脅層級為「該商場對本案的威脅」。
+ *
+ * 注意：本檔為示範用假資料（數字來自公開報導與人工估算），
+ * 尚未串接 Google Places / 人流 API。
+ */
+export const TARGET_MALL_ID = "lalaport-bbcc";
+
+export const malls: Mall[] = [
+  {
+    id: "lalaport-bbcc",
+    name: "啦啦寶都武吉免登城中城",
+    nameEn: "LaLaport BBCC",
+    lat: 3.141,
+    lng: 101.7085,
+    opened: "2022.1",
+    sizeLabel: "~860,000 sf / 400+ 店",
+    modelSf: 860_000,
+    trafficLabel: "~1,500 萬（估）",
+    trafficM: 15,
+    positioning: [
+      "三井不動產東南亞首座 LaLaport",
+      "日系家庭客群定位、大型 Nitori / 蔦屋書店進駐",
+      "BBCC 綜合開發區核心零售",
+    ],
+    positioningTag: "日系家庭",
+    segments: ["japanese", "family", "mass", "food"],
+    threatLevel: "target",
+    threatNote: "本案（分析主體）",
+  },
+  {
+    id: "118-mall",
+    name: "118 Mall",
+    nameEn: "118 Mall @ Merdeka 118",
+    lat: 3.1417,
+    lng: 101.7008,
+    opened: "2026.8",
+    sizeLabel: "800,000+ sf / 300+ 店",
+    modelSf: 850_000,
+    trafficLabel: "預估 2,200 萬",
+    trafficM: 22,
+    positioning: [
+      "世界第二高樓國家級新地標，媒體曝光量高",
+      "Park Hyatt KL 高端旅客吸引力",
+      "8,000 個車位（全 KL 最多）",
+      "Makanizm 美食廣場、馬來西亞匠人區與 BBCC 的 Tuah 1895 / Malaysia Grand Bazaar 正面競爭",
+    ],
+    positioningTag: "國家級地標",
+    segments: ["mass", "food", "family", "tourist"],
+    threatLevel: "extreme",
+    threatNote: "同層競爭",
+  },
+  {
+    id: "trx",
+    name: "敦拉薩購物天堂",
+    nameEn: "The Exchange TRX",
+    lat: 3.1421,
+    lng: 101.718,
+    opened: "2023.11",
+    sizeLabel: "1.3M sf / 400+ 店",
+    modelSf: 1_300_000,
+    trafficLabel: "首年強勁（~3,000 萬估）",
+    trafficM: 30,
+    positioning: [
+      "日系西武百貨東南亞首店",
+      "知名高端品牌拉走高消費力顧客：Apple 旗艦店、LV、Chanel、Maison Kitsuné、Gentle Monster、Alo Yoga",
+      "TRX City Park 10 英畝屋頂公園，超越 BBCC 1,700 m² 屋頂花園的規模",
+    ],
+    positioningTag: "高端奢華",
+    segments: ["luxury", "premium", "tourist", "japanese"],
+    threatLevel: "high",
+    threatNote: "上層威脅",
+  },
+  {
+    id: "pavilion-kl",
+    name: "柏威年廣場",
+    nameEn: "Pavilion KL",
+    lat: 3.1491,
+    lng: 101.7134,
+    opened: "2007",
+    sizeLabel: "1.61M sf / 700+ 店",
+    modelSf: 1_610_000,
+    trafficLabel: "3,000–3,300 萬",
+    trafficM: 31.5,
+    positioning: ["高端主流"],
+    positioningTag: "高端主流",
+    segments: ["premium", "luxury", "mass", "tourist"],
+    threatLevel: "medium",
+    threatNote: "已分眾",
+  },
+  {
+    id: "lot-10",
+    name: "樂天廣場",
+    nameEn: "Lot 10",
+    lat: 3.147,
+    lng: 101.7112,
+    opened: "1990s",
+    sizeLabel: "~700,000 sf",
+    modelSf: 700_000,
+    trafficLabel: "未單獨公開（~1,200 萬估）",
+    trafficM: 12,
+    positioning: ["日本主題（十號胡同、伊勢丹 The Japan Store 淵源）"],
+    positioningTag: "日本主題",
+    segments: ["japanese", "food", "youth"],
+    threatLevel: "medium",
+    threatNote: "日系定位重疊",
+  },
+  {
+    id: "berjaya-times-square",
+    name: "成功時代廣場",
+    nameEn: "Berjaya Times Square",
+    lat: 3.1428,
+    lng: 101.7103,
+    opened: "2003",
+    sizeLabel: "7.5M sf / 1,000+ 店",
+    modelSf: 2_500_000, // 總樓地板 7.5M sf 含飯店/辦公，有效零售面積取估算值
+    trafficLabel: "~250 萬/月",
+    trafficM: 30,
+    positioning: ["大眾、年輕、室內主題樂園"],
+    positioningTag: "大眾娛樂",
+    segments: ["mass", "youth", "family", "themepark"],
+    threatLevel: "low",
+    threatNote: "客群差異大",
+  },
+];
+
+export const mallById = (id: string): Mall | undefined =>
+  malls.find((m) => m.id === id);
+
+/** 以 id / 中英文名稱模糊比對商場（供 LLM 傳入的名稱解析用） */
+export function resolveMall(query: string): Mall | undefined {
+  const q = query.trim().toLowerCase();
+  return malls.find(
+    (m) =>
+      m.id === q ||
+      m.name.toLowerCase().includes(q) ||
+      m.nameEn.toLowerCase().includes(q) ||
+      q.includes(m.name.toLowerCase()) ||
+      q.includes(m.nameEn.toLowerCase())
+  );
+}
