@@ -119,11 +119,12 @@ function MallPin({
 }
 
 export default function MapView({
+  apiKey,
   directives,
 }: {
+  apiKey: string;
   directives: MapDirectives;
 }) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = selectedId ? mallById(selectedId) : undefined;
 
@@ -136,7 +137,7 @@ export default function MapView({
   if (!apiKey) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-gray-500">
-        尚未設定 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+        尚未設定 GOOGLE_MAPS_API_KEY
       </div>
     );
   }

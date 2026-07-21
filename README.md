@@ -27,9 +27,24 @@ npm run dev                  # http://localhost:3000
 | 變數 | 用途 |
 |---|---|
 | `GEMINI_API_KEY` | 對話分析（server 端，勿暴露） |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | 地圖底圖（client 端公開 key，請在 GCP Console 設網域限制） |
+| `GOOGLE_MAPS_API_KEY` | 地圖底圖（server 於請求時讀取後傳給地圖元件；請在 GCP Console 設網域限制） |
 
 > 注意：Google Maps key 所屬 GCP 專案需**綁定計費帳戶**並啟用 Maps JavaScript API，否則地圖會顯示「For development purposes only」浮水印與警告視窗。
+
+## 部署到 Cloud Run
+
+前置需求（本機一次性）：安裝 [gcloud SDK](https://cloud.google.com/sdk/docs/install)、`gcloud auth login`、GCP 專案已綁定計費。
+
+```bash
+PROJECT_ID=你的專案id \
+GEMINI_API_KEY=xxx \
+GOOGLE_MAPS_API_KEY=xxx \
+./web/deploy.sh
+```
+
+腳本會自動啟用 Cloud Run / Cloud Build / Artifact Registry API，從原始碼（`web/Dockerfile`，Next.js standalone 模式）建置並部署，完成後印出服務網址。可用 `REGION`（預設 `asia-southeast1`）與 `SERVICE`（預設 `talktomap`）覆寫。
+
+兩把 key 以 Cloud Run 環境變數（`--set-env-vars`）於執行期注入，不會進到映像檔或版本控制。
 
 ## 專案結構
 
