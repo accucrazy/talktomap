@@ -8,7 +8,9 @@ import {
   useMap,
 } from "@vis.gl/react-google-maps";
 import { useEffect, useState } from "react";
-import { mallById, malls, TARGET_MALL_ID } from "@/lib/data/malls";
+import { uiStrings, type UIStrings } from "@/lib/i18n";
+import { mallById } from "@/lib/resolve";
+import type { Scenario } from "@/lib/scenarios";
 import type { Mall } from "@/lib/types";
 import { THREAT_META } from "./threat";
 
@@ -21,19 +23,24 @@ export interface MapDirectives {
   seq: number;
 }
 
-const DEFAULT_CENTER = { lat: 3.1447, lng: 101.7095 };
-const DEFAULT_ZOOM = 15;
-
 /** 依指令控制鏡頭 */
-function CameraController({ directives }: { directives: MapDirectives }) {
+function CameraController({
+  directives,
+  malls,
+  fallbackZoom,
+}: {
+  directives: MapDirectives;
+  malls: Mall[];
+  fallbackZoom: number;
+}) {
   const map = useMap();
   useEffect(() => {
     if (!map || !directives.focus) return;
-    const mall = mallById(directives.focus.mallId);
+    const mall = mallById(malls, directives.focus.mallId);
     if (!mall) return;
     map.panTo({ lat: mall.lat, lng: mall.lng });
-    map.setZoom(directives.focus.zoom ?? 15);
-  }, [map, directives.focus, directives.seq]);
+    map.setZoom(directives.focus.zoom ?? fallbackZoom);
+  }, [map, directives.focus, directives.seq, malls, fallbackZoom]);
   return null;
 }
 
@@ -73,13 +80,16 @@ function MallPin({
   mall,
   highlighted,
   onClick,
+  t,
 }: {
   mall: Mall;
   highlighted: boolean;
   onClick: () => void;
+  t: UIStrings;
 }) {
   const meta = THREAT_META[mall.threatLevel];
   const isTarget = mall.threatLevel === "target";
+  const levelLabel = t.threatLevels[mall.threatLevel];
   return (
     <AdvancedMarker
       position={{ lat: mall.lat, lng: mall.lng }}
@@ -110,7 +120,7 @@ function MallPin({
             style={{ background: meta.color }}
           />
           <span className="text-[11px] font-bold" style={{ color: meta.color }}>
-            {isTarget ? "本案" : `威脅${meta.label}`}
+            {isTarget ? t.pinTarget : `${t.threatPrefix}${levelLabel}`}
           </span>
         </div>
       </div>
@@ -121,18 +131,22 @@ function MallPin({
 export default function MapView({
   apiKey,
   directives,
+  scenario,
 }: {
   apiKey: string;
   directives: MapDirectives;
+  scenario: Scenario;
 }) {
+  const { malls, targetId } = scenario;
+  const t = uiStrings(scenario.locale);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = selectedId ? mallById(selectedId) : undefined;
+  const selected = selectedId ? mallById(malls, selectedId) : undefined;
 
-  // 對話尚未觸發任何半徑圈時，預設在本案畫 0.4km 圈（對應截圖粉紅圈）
+  // 對話尚未觸發任何半徑圈時，預設在本案畫情境預設半徑圈
   const circles =
     directives.circles.length > 0
       ? directives.circles
-      : [{ mallId: TARGET_MALL_ID, radiusKm: 0.4 }];
+      : [{ mallId: targetId, radiusKm: scenario.defaultRadiusKm }];
 
   if (!apiKey) {
     return (
@@ -143,11 +157,12 @@ export default function MapView({
   }
 
   return (
-    <APIProvider apiKey={apiKey} language="zh-TW" region="MY">
+    <APIProvider apiKey={apiKey} language={scenario.language} region={scenario.region}>
       <Map
+        key={scenario.id}
         mapId="DEMO_MAP_ID"
-        defaultCenter={DEFAULT_CENTER}
-        defaultZoom={DEFAULT_ZOOM}
+        defaultCenter={scenario.center}
+        defaultZoom={scenario.zoom}
         gestureHandling="greedy"
         disableDefaultUI={false}
         mapTypeControl={false}
@@ -155,10 +170,14 @@ export default function MapView({
         fullscreenControl={false}
         className="h-full w-full"
       >
-        <CameraController directives={directives} />
+        <CameraController
+          directives={directives}
+          malls={malls}
+          fallbackZoom={scenario.zoom}
+        />
 
         {circles.map((c) => {
-          const mall = mallById(c.mallId);
+          const mall = mallById(malls, c.mallId);
           if (!mall) return null;
           const color =
             mall.threatLevel === "target"
@@ -181,6 +200,7 @@ export default function MapView({
             mall={mall}
             highlighted={directives.highlightIds.includes(mall.id)}
             onClick={() => setSelectedId(mall.id)}
+            t={t}
           />
         ))}
 
@@ -199,9 +219,13 @@ export default function MapView({
                 </span>
               </div>
               <div className="mb-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600">
-                <span>開幕 {selected.opened}</span>
+                <span>
+                  {t.infoOpened} {selected.opened}
+                </span>
                 <span>{selected.sizeLabel}</span>
-                <span>年人流 {selected.trafficLabel}</span>
+                <span>
+                  {t.infoTraffic} {selected.trafficLabel}
+                </span>
               </div>
               <ul className="ml-4 list-disc space-y-0.5 text-xs text-gray-700">
                 {selected.positioning.map((p) => (

@@ -1,5 +1,6 @@
-import { malls, mallById, resolveMall, TARGET_MALL_ID } from "./data/malls";
 import { haversineKm } from "./geo";
+import { mallById, resolveMall } from "./resolve";
+import type { Scenario } from "./scenarios";
 import type { Mall } from "./types";
 
 const round = (n: number, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
@@ -43,26 +44,26 @@ export function threatLabel(m: Mall): string {
   }
 }
 
-/* ---------------- 工具實作（給 Gemini function calling 呼叫） ---------------- */
+/* ---------------- 工具實作（給 Gemini function calling 呼叫，scenario-scoped） ---------------- */
 
-export function listMalls() {
+export function listMalls(sc: Scenario) {
   return {
     說明: "商圈內所有已建檔商場（示範資料）",
-    商場: malls.map(mallSummary),
+    商場: sc.malls.map(mallSummary),
   };
 }
 
-export function getMall(nameOrId: string) {
-  const m = resolveMall(nameOrId);
+export function getMall(sc: Scenario, nameOrId: string) {
+  const m = resolveMall(sc.malls, nameOrId);
   if (!m) return { error: `找不到商場「${nameOrId}」，可用 list_malls 查詢清單` };
   return mallSummary(m);
 }
 
-export function getCompetitorsNear(nameOrId: string, radiusKm = 1.5) {
-  const center = resolveMall(nameOrId);
+export function getCompetitorsNear(sc: Scenario, nameOrId: string, radiusKm = 1.5) {
+  const center = resolveMall(sc.malls, nameOrId);
   if (!center)
     return { error: `找不到商場「${nameOrId}」，可用 list_malls 查詢清單` };
-  const competitors = malls
+  const competitors = sc.malls
     .filter((m) => m.id !== center.id)
     .map((m) => ({
       ...mallSummary(m),
@@ -80,14 +81,16 @@ export function getCompetitorsNear(nameOrId: string, radiusKm = 1.5) {
 }
 
 /**
- * 威脅分析：對指定商場（預設為本案 LaLaport BBCC）
+ * 威脅分析：對指定商場（預設為本案）
  * 回傳每個競品的威脅層級（人工判讀）+ 量化因子（距離 / 定位重疊 / 規模比）。
  */
-export function getThreatAnalysis(nameOrId?: string) {
-  const target = nameOrId ? resolveMall(nameOrId) : mallById(TARGET_MALL_ID);
+export function getThreatAnalysis(sc: Scenario, nameOrId?: string) {
+  const target = nameOrId
+    ? resolveMall(sc.malls, nameOrId)
+    : mallById(sc.malls, sc.targetId);
   if (!target)
     return { error: `找不到商場「${nameOrId}」，可用 list_malls 查詢清單` };
-  const rows = malls
+  const rows = sc.malls
     .filter((m) => m.id !== target.id)
     .map((m) => {
       const dist = haversineKm(target.lat, target.lng, m.lat, m.lng);
@@ -113,24 +116,17 @@ export function getThreatAnalysis(nameOrId?: string) {
 }
 
 /**
- * 簡化 Huff 引力模型：以「有效面積 / 距離^2」計算商圈內各商場的客流分配佔比，
- * 並模擬新進入者（預設 118 Mall，2026.8 開幕）開幕前後的佔比變化 → 客流影響估算。
+ * 簡化 Huff 引力模型：以「有效面積 / 距離²」計算商圈內各商場的客流分配佔比，
+ * 並模擬新進入者開幕前後的佔比變化 → 客流影響估算。
  */
-export function estimateSalesImpact(newEntrantNameOrId = "118-mall") {
-  const entrant = resolveMall(newEntrantNameOrId);
+export function estimateSalesImpact(sc: Scenario, newEntrantNameOrId?: string) {
+  const entrant = resolveMall(sc.malls, newEntrantNameOrId ?? sc.defaultEntrantId);
   if (!entrant)
     return {
       error: `找不到商場「${newEntrantNameOrId}」，可用 list_malls 查詢清單`,
     };
 
-  // 需求點：商圈內主要人流節點（車站/路口，示範用）
-  const demandPoints = [
-    { name: "Bukit Bintang 站", lat: 3.146, lng: 101.7113, weight: 0.3 },
-    { name: "Hang Tuah 站", lat: 3.14, lng: 101.706, weight: 0.2 },
-    { name: "TRX 站", lat: 3.142, lng: 101.7183, weight: 0.2 },
-    { name: "Merdeka 站", lat: 3.1419, lng: 101.7022, weight: 0.15 },
-    { name: "Imbi 站", lat: 3.1428, lng: 101.7092, weight: 0.15 },
-  ];
+  const demandPoints = sc.demandPoints;
 
   const huffShares = (candidates: Mall[]) => {
     const shares: Record<string, number> = {};
@@ -146,9 +142,9 @@ export function estimateSalesImpact(newEntrantNameOrId = "118-mall") {
     return shares;
   };
 
-  const withoutEntrant = malls.filter((m) => m.id !== entrant.id);
+  const withoutEntrant = sc.malls.filter((m) => m.id !== entrant.id);
   const before = huffShares(withoutEntrant);
-  const after = huffShares(malls);
+  const after = huffShares(sc.malls);
 
   const impact = withoutEntrant.map((m) => {
     const b = before[m.id];
@@ -168,14 +164,13 @@ export function estimateSalesImpact(newEntrantNameOrId = "118-mall") {
   });
 
   return {
-    模型: "簡化 Huff 引力模型（吸引力 = 有效面積 / 距離²，5 個人流需求節點加權）",
+    模型: sc.huffModelLabel,
     新進入者: `${entrant.name}（${entrant.opened} 開幕）`,
     警語:
       "示範等級粗略估算：未含價格帶、品牌組合、行銷等因子，僅供相對比較，非精準預測",
     開幕後市佔: `${round(after[entrant.id] * 100, 1)}%（商圈內客流分配佔比）`,
     各商場影響: impact.sort(
-      (a, b) =>
-        b.年客流損失估計_百萬人次 - a.年客流損失估計_百萬人次
+      (a, b) => b.年客流損失估計_百萬人次 - a.年客流損失估計_百萬人次
     ),
   };
 }

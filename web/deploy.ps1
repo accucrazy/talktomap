@@ -1,4 +1,4 @@
-# Talk to Map — Cloud Run 部署（Windows / PowerShell 版）
+﻿# Talk to Map — Cloud Run 部署（Windows / PowerShell 版）
 #
 # 用法（PowerShell）：
 #   .\web\deploy.ps1 -ProjectId 你的專案id -GeminiApiKey xxx -GoogleMapsApiKey xxx
@@ -11,6 +11,8 @@ param(
     [Parameter(Mandatory = $true)] [string] $ProjectId,
     [Parameter(Mandatory = $true)] [string] $GeminiApiKey,
     [Parameter(Mandatory = $true)] [string] $GoogleMapsApiKey,
+    # 可選：日本 e-Stat 政府統計 appId（設定後名古屋情境會查 e-Stat 開放數據）
+    [string] $EstatAppId = "",
     [string] $Region = "asia-southeast1",
     [string] $Service = "talktomap"
 )
@@ -39,6 +41,12 @@ $sourceDir = $PSScriptRoot
 Write-Host "啟用必要的 API（已啟用會直接跳過）..."
 gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com --project $ProjectId
 
+$envVars = "GEMINI_API_KEY=$GeminiApiKey,GOOGLE_MAPS_API_KEY=$GoogleMapsApiKey"
+if ($EstatAppId) {
+    $envVars = "$envVars,ESTAT_APP_ID=$EstatAppId"
+    Write-Host "已帶入 ESTAT_APP_ID（名古屋情境將查詢 e-Stat 開放數據）"
+}
+
 Write-Host "從原始碼建置並部署到 Cloud Run..."
 gcloud run deploy $Service `
     --source $sourceDir `
@@ -50,7 +58,7 @@ gcloud run deploy $Service `
     --cpu 1 `
     --min-instances 0 `
     --max-instances 3 `
-    --set-env-vars "GEMINI_API_KEY=$GeminiApiKey,GOOGLE_MAPS_API_KEY=$GoogleMapsApiKey"
+    --set-env-vars $envVars
 
 Write-Host ""
 Write-Host "部署完成。服務網址："

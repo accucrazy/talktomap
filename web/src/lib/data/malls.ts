@@ -127,18 +127,3 @@ export const malls: Mall[] = [
   },
 ];
 
-export const mallById = (id: string): Mall | undefined =>
-  malls.find((m) => m.id === id);
-
-/** 以 id / 中英文名稱模糊比對商場（供 LLM 傳入的名稱解析用） */
-export function resolveMall(query: string): Mall | undefined {
-  const q = query.trim().toLowerCase();
-  return malls.find(
-    (m) =>
-      m.id === q ||
-      m.name.toLowerCase().includes(q) ||
-      m.nameEn.toLowerCase().includes(q) ||
-      q.includes(m.name.toLowerCase()) ||
-      q.includes(m.nameEn.toLowerCase())
-  );
-}

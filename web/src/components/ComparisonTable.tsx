@@ -1,19 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { malls } from "@/lib/data/malls";
+import { uiStrings, type Locale } from "@/lib/i18n";
 import type { Mall } from "@/lib/types";
 import { THREAT_META } from "./threat";
 
-function ThreatCell({ mall }: { mall: Mall }) {
+function ThreatCell({ mall, locale }: { mall: Mall; locale: Locale }) {
   const meta = THREAT_META[mall.threatLevel];
+  const label = uiStrings(locale).threatLevels[mall.threatLevel];
   return (
     <div className="flex flex-col gap-0.5">
       <span
         className="text-sm font-bold tracking-wide"
         style={{ color: meta.color }}
       >
-        {meta.dots} {meta.label}
+        {meta.dots} {label}
       </span>
       <span className="text-xs text-gray-500">{mall.threatNote}</span>
     </div>
@@ -21,11 +22,16 @@ function ThreatCell({ mall }: { mall: Mall }) {
 }
 
 export default function ComparisonTable({
+  malls,
+  locale,
   onSelectMall,
 }: {
+  malls: Mall[];
+  locale: Locale;
   onSelectMall: (mallId: string) => void;
 }) {
   const [open, setOpen] = useState(true);
+  const t = uiStrings(locale);
 
   return (
     <div className="pointer-events-auto overflow-hidden rounded-t-xl border border-b-0 border-red-200 bg-white/97 shadow-[0_-4px_20px_rgba(0,0,0,0.12)] backdrop-blur">
@@ -35,13 +41,13 @@ export default function ComparisonTable({
         className="flex w-full items-center justify-between bg-brand px-4 py-2 text-left"
       >
         <span className="text-sm font-bold text-white">
-          商場競爭比較表
+          {t.tableTitle}
           <span className="ml-2 text-xs font-medium text-white/75">
-            點列可定位地圖
+            {t.tableHint}
           </span>
         </span>
         <span className="text-xs font-bold text-white/90">
-          {open ? "收合 ▾" : "展開 ▴"}
+          {open ? t.collapse : t.expand}
         </span>
       </button>
 
@@ -50,12 +56,12 @@ export default function ComparisonTable({
           <table className="w-full min-w-[860px] border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10">
               <tr className="bg-[#f37878] text-white">
-                <th className="px-3 py-2 font-bold">商場</th>
-                <th className="px-3 py-2 font-bold">開幕</th>
-                <th className="px-3 py-2 font-bold">規模</th>
-                <th className="px-3 py-2 font-bold">年人流</th>
-                <th className="px-3 py-2 font-bold">核心定位</th>
-                <th className="px-3 py-2 font-bold">威脅層級</th>
+                <th className="px-3 py-2 font-bold">{t.colMall}</th>
+                <th className="px-3 py-2 font-bold">{t.colOpened}</th>
+                <th className="px-3 py-2 font-bold">{t.colSize}</th>
+                <th className="px-3 py-2 font-bold">{t.colTraffic}</th>
+                <th className="px-3 py-2 font-bold">{t.colPositioning}</th>
+                <th className="px-3 py-2 font-bold">{t.colThreat}</th>
               </tr>
             </thead>
             <tbody>
@@ -90,7 +96,7 @@ export default function ComparisonTable({
                     )}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
-                    <ThreatCell mall={mall} />
+                    <ThreatCell mall={mall} locale={locale} />
                   </td>
                 </tr>
               ))}

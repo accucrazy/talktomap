@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import ChatPanel from "@/components/ChatPanel";
 import ComparisonTable from "@/components/ComparisonTable";
 import MapView, { type MapDirectives } from "@/components/MapView";
+import { uiStrings } from "@/lib/i18n";
+import { SCENARIOS, type Scenario } from "@/lib/scenarios";
 import type { MapAction } from "@/lib/types";
 
 const INITIAL_DIRECTIVES: MapDirectives = {
@@ -14,9 +17,20 @@ const INITIAL_DIRECTIVES: MapDirectives = {
 };
 
 export default function AppShell({ mapsApiKey }: { mapsApiKey: string }) {
+  const [scenario, setScenario] = useState<Scenario>(SCENARIOS[0]);
   const [directives, setDirectives] = useState<MapDirectives>(
     INITIAL_DIRECTIVES
   );
+
+  // 切換情境時清空地圖上的舊指令（highlight / circle / focus）
+  useEffect(() => {
+    setDirectives((prev) => ({
+      focus: null,
+      highlightIds: [],
+      circles: [],
+      seq: prev.seq + 1,
+    }));
+  }, [scenario.id]);
 
   /** 將 chat 回傳的 MapAction[] 化簡為地圖指令狀態 */
   const applyMapActions = useCallback((actions: MapAction[]) => {
@@ -57,6 +71,8 @@ export default function AppShell({ mapsApiKey }: { mapsApiKey: string }) {
     [applyMapActions]
   );
 
+  const t = uiStrings(scenario.locale);
+
   return (
     <div className="flex h-dvh flex-col">
       {/* Header */}
@@ -70,17 +86,45 @@ export default function AppShell({ mapsApiKey }: { mapsApiKey: string }) {
           </h1>
         </div>
         <span className="hidden text-sm font-medium text-gray-500 sm:inline">
-          對話式商圈分析
+          {t.appSubtitle}
         </span>
+
         <div className="ml-auto flex items-center gap-2">
-          <span className="rounded-full bg-brand-pink px-3 py-1 text-xs font-bold text-brand-dark">
-            吉隆坡 · Bukit Bintang / TRX
-          </span>
+          {/* 情境切換器 */}
+          <div className="flex items-center rounded-full border border-red-200 bg-white p-0.5">
+            {SCENARIOS.map((s) => {
+              const active = s.id === scenario.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setScenario(s)}
+                  className={`rounded-full px-3 py-1 text-xs font-bold transition-colors ${
+                    active
+                      ? "bg-brand text-white"
+                      : "text-brand-dark hover:bg-brand-pink"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {scenario.id === "nagoya-esca" && (
+            <Link
+              href="/proposals/esca"
+              className="hidden rounded-full border border-red-200 px-3 py-1 text-xs font-bold text-brand-dark transition hover:bg-brand-pink sm:inline"
+            >
+              {t.proposalLink}
+            </Link>
+          )}
+
           <span
             className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700"
-            title="種子建檔資料 + 簡化模型，尚未串接 Google Places / 人流 API"
+            title={t.demoBadgeTitle}
           >
-            示範資料
+            {t.demoBadge}
           </span>
         </div>
       </header>
@@ -88,14 +132,22 @@ export default function AppShell({ mapsApiKey }: { mapsApiKey: string }) {
       {/* 主區：左對話 / 右地圖（行動版上下堆疊，地圖在上） */}
       <main className="flex min-h-0 flex-1 flex-col-reverse md:flex-row">
         <aside className="h-[45dvh] w-full border-t border-red-100 md:h-auto md:w-[380px] md:shrink-0 md:border-r md:border-t-0">
-          <ChatPanel onMapActions={applyMapActions} />
+          <ChatPanel scenario={scenario} onMapActions={applyMapActions} />
         </aside>
 
         <section className="relative min-h-0 flex-1">
-          <MapView apiKey={mapsApiKey} directives={directives} />
+          <MapView
+            apiKey={mapsApiKey}
+            directives={directives}
+            scenario={scenario}
+          />
           {/* 底部比較表抽屜 */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-2 md:px-4">
-            <ComparisonTable onSelectMall={focusMall} />
+            <ComparisonTable
+              malls={scenario.malls}
+              locale={scenario.locale}
+              onSelectMall={focusMall}
+            />
           </div>
         </section>
       </main>

@@ -56,9 +56,24 @@ export interface ChatMessage {
   text: string;
 }
 
+/** 結構化輸出：從回答萃取的信心水準、關鍵洞察與假設（Gemini structured output） */
+export interface StructuredInsight {
+  confidence: "高" | "中" | "低";
+  keyInsights: string[];
+  assumptions: string[];
+}
+
 export interface ChatResponse {
   reply: string;
   mapActions: MapAction[];
   /** 本輪呼叫過的分析工具（顯示於 UI 供透明化） */
   toolsUsed: string[];
+  /** 回答此輪的 Agent 顯示名 */
+  agentName?: string;
+  /** 被委派過的專職分析師顯示名 */
+  delegatedTo?: string[];
+  /** 結構化摘要（可能為 null，代表未啟用或萃取失敗） */
+  structured?: StructuredInsight | null;
+  /** context 修剪：本輪省略的較舊訊息數（0 表示未修剪） */
+  prunedCount?: number;
 }

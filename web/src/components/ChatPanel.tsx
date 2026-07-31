@@ -1,25 +1,28 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ChatMessage, ChatResponse, MapAction } from "@/lib/types";
+import { AGENTS, DEFAULT_AGENT_ID } from "@/lib/agent/registry";
+import { uiStrings, type UIStrings } from "@/lib/i18n";
+import type { Scenario } from "@/lib/scenarios";
+import type {
+  ChatMessage,
+  ChatResponse,
+  MapAction,
+  StructuredInsight,
+} from "@/lib/types";
 
-const SUGGESTIONS = [
-  "118 Mall 開幕後，誰受威脅最大？",
-  "以 LaLaport 為中心 1.5 公里內有哪些競品？",
-  "預估 118 Mall 開幕對各商場的客流影響",
-];
+interface MsgMeta {
+  tools: string[];
+  agentName?: string;
+  delegatedTo?: string[];
+  structured?: StructuredInsight | null;
+  prunedCount?: number;
+}
 
-const TOOL_LABELS: Record<string, string> = {
-  list_malls: "商場清單",
-  get_mall: "商場資料",
-  get_competitors_near: "競品掃描",
-  get_threat_analysis: "威脅分析",
-  estimate_sales_impact: "客流影響模型",
-};
-
-const WELCOME: ChatMessage = {
-  role: "model",
-  text: "你好，我是 Talk to Map 商圈分析助理。\n目前載入示範情境：**吉隆坡 Bukit Bintang / TRX 商圈**（本案：LaLaport BBCC）。\n你可以問我競品威脅、半徑掃描、或新商場開幕的客流影響——分析結果會同步標到右側地圖。",
+const CONF_STYLE: Record<string, string> = {
+  高: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  中: "bg-amber-50 text-amber-700 border-amber-200",
+  低: "bg-rose-50 text-rose-700 border-rose-200",
 };
 
 /** 極簡 markdown：**粗體** 與「- 」清單 */
@@ -57,15 +60,27 @@ function renderMd(text: string) {
 }
 
 export default function ChatPanel({
+  scenario,
   onMapActions,
 }: {
+  scenario: Scenario;
   onMapActions: (actions: MapAction[]) => void;
 }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME]);
-  const [toolChips, setToolChips] = useState<Record<number, string[]>>({});
+  const welcome: ChatMessage = { role: "model", text: scenario.greeting };
+  const [messages, setMessages] = useState<ChatMessage[]>([welcome]);
+  const [meta, setMeta] = useState<Record<number, MsgMeta>>({});
+  const [agentId, setAgentId] = useState<string>(DEFAULT_AGENT_ID);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const t = uiStrings(scenario.locale);
+
+  // 切換情境時重置對話（開場白、工具標記）
+  useEffect(() => {
+    setMessages([{ role: "model", text: scenario.greeting }]);
+    setMeta({});
+    setInput("");
+  }, [scenario.id, scenario.greeting]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -85,8 +100,12 @@ export default function ChatPanel({
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // WELCOME 是前端寫死的開場白，不送進模型歷史
-        body: JSON.stringify({ messages: history.slice(1) }),
+        // 開場白為前端寫死，不送進模型歷史；附上情境 id 與 Agent id
+        body: JSON.stringify({
+          messages: history.slice(1),
+          scenarioId: scenario.id,
+          agentId,
+        }),
       });
       if (!res.ok) {
         const err = (await res.json().catch(() => null)) as {
@@ -96,9 +115,15 @@ export default function ChatPanel({
       }
       const data = (await res.json()) as ChatResponse;
       setMessages((prev) => {
-        setToolChips((chips) => ({
-          ...chips,
-          [prev.length]: data.toolsUsed,
+        setMeta((m) => ({
+          ...m,
+          [prev.length]: {
+            tools: data.toolsUsed,
+            agentName: data.agentName,
+            delegatedTo: data.delegatedTo,
+            structured: data.structured,
+            prunedCount: data.prunedCount,
+          },
         }));
         return [...prev, { role: "model", text: data.reply }];
       });
@@ -108,7 +133,7 @@ export default function ChatPanel({
         ...prev,
         {
           role: "model",
-          text: `分析失敗：${e instanceof Error ? e.message : "未知錯誤"}，請再試一次。`,
+          text: `${t.analysisFailed}：${e instanceof Error ? e.message : "?"}。${t.retryHint}`,
         },
       ]);
     } finally {
@@ -131,31 +156,57 @@ export default function ChatPanel({
             >
               {m.role === "model" ? renderMd(m.text) : m.text}
             </div>
-            {m.role === "model" && toolChips[i]?.length ? (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {toolChips[i].map((t) => (
-                  <span
-                    key={t}
-                    className="rounded-full border border-red-200 bg-white px-2 py-0.5 text-[10.5px] font-medium text-brand-dark"
-                  >
-                    ⚙ {TOOL_LABELS[t] ?? t}
-                  </span>
-                ))}
-              </div>
+            {m.role === "model" && meta[i] ? (
+              <MessageMeta info={meta[i]} t={t} />
             ) : null}
           </div>
         ))}
         {loading && (
           <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-red-100 bg-brand-pink/60 px-3.5 py-2.5 text-[13px] text-gray-500 w-fit">
             <span className="inline-block h-2 w-2 animate-ping rounded-full bg-brand" />
-            分析中（呼叫工具查詢資料）…
+            {t.loadingText}
           </div>
         )}
       </div>
 
+      {/* Agent 選擇器 */}
+      <div className="border-t border-gray-100 px-4 pt-2.5">
+        <div className="mb-1 text-[10.5px] font-bold text-gray-400">
+          {t.analystLabel}
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {AGENTS.map((a) => {
+            const active = a.id === agentId;
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => setAgentId(a.id)}
+                disabled={loading}
+                title={`${a.role}｜靈感：${a.inspiration}`}
+                className={`rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors disabled:opacity-50 ${
+                  active
+                    ? "border-brand bg-brand text-white"
+                    : "border-red-200 bg-white text-brand-dark hover:bg-brand-pink"
+                }`}
+              >
+                {a.name}
+                <span
+                  className={`ml-1 font-normal ${
+                    active ? "text-white/80" : "text-gray-400"
+                  }`}
+                >
+                  {t.agentRoles[a.id] ?? a.role}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 建議問題 */}
-      <div className="flex flex-wrap gap-1.5 border-t border-gray-100 px-4 pt-3">
-        {SUGGESTIONS.map((s) => (
+      <div className="flex flex-wrap gap-1.5 px-4 pt-2.5">
+        {scenario.suggestions.map((s) => (
           <button
             key={s}
             type="button"
@@ -179,7 +230,7 @@ export default function ChatPanel({
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="問我商圈競爭、人流影響…"
+          placeholder={t.inputPlaceholder}
           className="flex-1 rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-brand"
         />
         <button
@@ -187,9 +238,76 @@ export default function ChatPanel({
           disabled={loading || !input.trim()}
           className="rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-dark disabled:opacity-40"
         >
-          送出
+          {t.sendButton}
         </button>
       </form>
+    </div>
+  );
+}
+
+/** 回答訊息下方的透明化資訊：Agent、委派、工具、context 修剪、結構化摘要 */
+function MessageMeta({ info, t }: { info: MsgMeta; t: UIStrings }) {
+  const s = info.structured;
+  return (
+    <div className="mt-1.5 space-y-1.5">
+      {/* Agent / 委派 / 工具 chips */}
+      <div className="flex flex-wrap items-center gap-1">
+        {info.agentName ? (
+          <span className="rounded-full bg-brand px-2 py-0.5 text-[10.5px] font-bold text-white">
+            🧭 {info.agentName}
+          </span>
+        ) : null}
+        {info.delegatedTo?.map((d) => (
+          <span
+            key={d}
+            className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10.5px] font-medium text-sky-700"
+          >
+            ↪ {t.delegatePrefix} {d}
+          </span>
+        ))}
+        {info.tools?.map((tool) => (
+          <span
+            key={tool}
+            className="rounded-full border border-red-200 bg-white px-2 py-0.5 text-[10.5px] font-medium text-brand-dark"
+          >
+            ⚙ {t.toolLabels[tool] ?? tool}
+          </span>
+        ))}
+        {info.prunedCount ? (
+          <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[10.5px] font-medium text-gray-500">
+            ✂ {t.prunedSuffix(info.prunedCount)}
+          </span>
+        ) : null}
+      </div>
+
+      {/* 結構化摘要 */}
+      {s ? (
+        <div className="rounded-xl border border-red-100 bg-white/70 p-2.5 text-[12px]">
+          <div className="mb-1 flex items-center gap-1.5">
+            <span className="font-bold text-brand-dark">{t.structuredTitle}</span>
+            <span
+              className={`rounded-full border px-1.5 py-0.5 text-[10px] font-bold ${
+                CONF_STYLE[s.confidence] ?? CONF_STYLE["中"]
+              }`}
+            >
+              {t.confidenceLabel} {s.confidence}
+            </span>
+          </div>
+          {s.keyInsights.length ? (
+            <ul className="ml-4 list-disc space-y-0.5 text-gray-700">
+              {s.keyInsights.map((k, i) => (
+                <li key={i}>{k}</li>
+              ))}
+            </ul>
+          ) : null}
+          {s.assumptions.length ? (
+            <div className="mt-1.5 text-[11px] text-amber-700">
+              <span className="font-bold">{t.assumptionsLabel}：</span>
+              {s.assumptions.join("；")}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
