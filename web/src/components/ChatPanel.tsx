@@ -290,7 +290,7 @@ function MessageMeta({ info, t }: { info: MsgMeta; t: UIStrings }) {
                 CONF_STYLE[s.confidence] ?? CONF_STYLE["中"]
               }`}
             >
-              {t.confidenceLabel} {s.confidence}
+              {t.confidenceLabel} {t.confidenceValues[s.confidence] ?? s.confidence}
             </span>
           </div>
           {s.keyInsights.length ? (

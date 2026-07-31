@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ChatPanel from "@/components/ChatPanel";
 import ComparisonTable from "@/components/ComparisonTable";
 import MapView, { type MapDirectives } from "@/components/MapView";
 import { uiStrings } from "@/lib/i18n";
+import { mallById } from "@/lib/resolve";
 import { SCENARIOS, type Scenario } from "@/lib/scenarios";
 import type { MapAction } from "@/lib/types";
 
@@ -16,13 +17,19 @@ const INITIAL_DIRECTIVES: MapDirectives = {
   seq: 0,
 };
 
+const CHAT_MIN = 300;
+const CHAT_MAX = 640;
+
 export default function AppShell({ mapsApiKey }: { mapsApiKey: string }) {
   const [scenario, setScenario] = useState<Scenario>(SCENARIOS[0]);
   const [directives, setDirectives] = useState<MapDirectives>(
     INITIAL_DIRECTIVES
   );
+  const [radiusKm, setRadiusKm] = useState(SCENARIOS[0].defaultRadiusKm);
+  const [chatWidth, setChatWidth] = useState(380);
+  const draggingRef = useRef(false);
 
-  // 切換情境時清空地圖上的舊指令（highlight / circle / focus）
+  // 切換情境時清空地圖指令並重設半徑
   useEffect(() => {
     setDirectives((prev) => ({
       focus: null,
@@ -30,7 +37,34 @@ export default function AppShell({ mapsApiKey }: { mapsApiKey: string }) {
       circles: [],
       seq: prev.seq + 1,
     }));
-  }, [scenario.id]);
+    setRadiusKm(scenario.defaultRadiusKm);
+  }, [scenario.id, scenario.defaultRadiusKm]);
+
+  // 對話欄寬度拖曳
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!draggingRef.current) return;
+      e.preventDefault();
+      setChatWidth(Math.min(CHAT_MAX, Math.max(CHAT_MIN, e.clientX)));
+    };
+    const onUp = () => {
+      draggingRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, []);
+
+  const startDrag = useCallback(() => {
+    draggingRef.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
 
   /** 將 chat 回傳的 MapAction[] 化簡為地圖指令狀態 */
   const applyMapActions = useCallback((actions: MapAction[]) => {
@@ -72,6 +106,7 @@ export default function AppShell({ mapsApiKey }: { mapsApiKey: string }) {
   );
 
   const t = uiStrings(scenario.locale);
+  const target = mallById(scenario.malls, scenario.targetId);
 
   return (
     <div className="flex h-dvh flex-col">
@@ -131,21 +166,69 @@ export default function AppShell({ mapsApiKey }: { mapsApiKey: string }) {
 
       {/* 主區：左對話 / 右地圖（行動版上下堆疊，地圖在上） */}
       <main className="flex min-h-0 flex-1 flex-col-reverse md:flex-row">
-        <aside className="h-[45dvh] w-full border-t border-red-100 md:h-auto md:w-[380px] md:shrink-0 md:border-r md:border-t-0">
-          <ChatPanel scenario={scenario} onMapActions={applyMapActions} />
+        <aside
+          className="h-[45dvh] w-full shrink-0 border-t border-red-100 md:h-auto md:border-t-0"
+          style={{ ["--chat-w" as string]: `${chatWidth}px` }}
+        >
+          <div className="h-full w-full md:w-[var(--chat-w)]">
+            <ChatPanel scenario={scenario} onMapActions={applyMapActions} />
+          </div>
         </aside>
+
+        {/* 拖曳把手（桌機）：調整對話欄寬度 */}
+        <div
+          onPointerDown={startDrag}
+          onDoubleClick={() => setChatWidth(380)}
+          title={`${CHAT_MIN}–${CHAT_MAX}px`}
+          className="group hidden w-1.5 shrink-0 cursor-col-resize items-center justify-center border-x border-red-100 bg-red-50/60 transition-colors hover:bg-brand/30 md:flex"
+        >
+          <span className="h-8 w-0.5 rounded-full bg-brand/40 transition-colors group-hover:bg-brand" />
+        </div>
 
         <section className="relative min-h-0 flex-1">
           <MapView
             apiKey={mapsApiKey}
             directives={directives}
             scenario={scenario}
+            radiusKm={radiusKm}
           />
+
+          {/* 半徑控制（地圖左上） */}
+          <div className="absolute left-3 top-3 z-10 w-56 rounded-xl border border-red-100 bg-white/95 p-3 shadow-lg backdrop-blur">
+            <div className="mb-1 flex items-baseline justify-between">
+              <span className="text-[11px] font-bold text-brand-dark">
+                {t.radiusLabel}
+              </span>
+              <span className="text-sm font-black text-brand">
+                {radiusKm.toFixed(1)} km
+              </span>
+            </div>
+            <input
+              type="range"
+              min={scenario.radiusRange.min}
+              max={scenario.radiusRange.max}
+              step={scenario.radiusRange.step}
+              value={radiusKm}
+              onChange={(e) => setRadiusKm(Number(e.target.value))}
+              className="w-full accent-[color:var(--brand)]"
+              aria-label={t.radiusLabel}
+            />
+            <div className="flex justify-between text-[10px] text-gray-400">
+              <span>{scenario.radiusRange.min} km</span>
+              <span className="truncate px-1 text-center text-gray-500">
+                {target?.name}
+              </span>
+              <span>{scenario.radiusRange.max} km</span>
+            </div>
+          </div>
+
           {/* 底部比較表抽屜 */}
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-2 md:px-4">
             <ComparisonTable
               malls={scenario.malls}
               locale={scenario.locale}
+              target={target}
+              radiusKm={radiusKm}
               onSelectMall={focusMall}
             />
           </div>

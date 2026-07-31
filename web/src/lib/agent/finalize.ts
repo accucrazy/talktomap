@@ -12,11 +12,13 @@ export async function finalizeInsight(
   ai: GoogleGenAI,
   model: string,
   answer: string,
-  locale: "zh-TW" | "ja" = "zh-TW"
+  locale: "zh-TW" | "ja" | "en" = "zh-TW"
 ): Promise<StructuredInsight | null> {
   const langNote =
     locale === "ja"
       ? "keyInsights と assumptions は必ず日本語で書くこと。"
+      : locale === "en"
+      ? "Write keyInsights and assumptions in English."
       : "keyInsights 與 assumptions 用繁體中文。";
   try {
     const res = await ai.models.generateContent({

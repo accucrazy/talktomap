@@ -168,10 +168,10 @@ export function dispatchTool(
       const actions: MapAction[] = [];
       if (center) {
         actions.push({ type: "circle", mallId: center.id, radiusKm });
-        if ("競品" in result && Array.isArray(result.競品)) {
+        if ("competitors" in result && Array.isArray(result.competitors)) {
           actions.push({
             type: "highlight",
-            mallIds: (result.競品 as { id: string }[]).map((c) => c.id),
+            mallIds: (result.competitors as { id: string }[]).map((c) => c.id),
           });
         }
       }
@@ -184,11 +184,11 @@ export function dispatchTool(
         ? resolveMall(sc.malls, argName)
         : mallById(sc.malls, sc.targetId);
       const actions: MapAction[] = [];
-      if (target && "競品威脅" in result && Array.isArray(result.競品威脅)) {
+      if (target && "competitorThreats" in result && Array.isArray(result.competitorThreats)) {
         actions.push({ type: "focus", mallId: target.id, zoom: sc.zoom });
         actions.push({
           type: "highlight",
-          mallIds: (result.競品威脅 as { id: string }[]).map((c) => c.id),
+          mallIds: (result.competitorThreats as { id: string }[]).map((c) => c.id),
         });
       }
       return { result, mapActions: actions };

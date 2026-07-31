@@ -17,15 +17,15 @@ export function positioningOverlap(a: Mall, b: Mall): number {
 function mallSummary(m: Mall) {
   return {
     id: m.id,
-    名稱: m.name,
-    英文名: m.nameEn,
-    開幕: m.opened,
-    規模: m.sizeLabel,
-    年人流: m.trafficLabel,
-    核心定位: m.positioning,
-    定位標籤: m.positioningTag,
-    威脅層級: threatLabel(m),
-    備註: m.threatNote,
+    name: m.name,
+    nameEn: m.nameEn,
+    opened: m.opened,
+    size: m.sizeLabel,
+    annualFootfall: m.trafficLabel,
+    positioning: m.positioning,
+    positioningTag: m.positioningTag,
+    threatLevel: threatLabel(m),
+    note: m.threatNote,
   };
 }
 
@@ -48,8 +48,8 @@ export function threatLabel(m: Mall): string {
 
 export function listMalls(sc: Scenario) {
   return {
-    說明: "商圈內所有已建檔商場（示範資料）",
-    商場: sc.malls.map(mallSummary),
+    note: "商圈內所有已建檔商場（示範資料）",
+    malls: sc.malls.map(mallSummary),
   };
 }
 
@@ -67,16 +67,16 @@ export function getCompetitorsNear(sc: Scenario, nameOrId: string, radiusKm = 1.
     .filter((m) => m.id !== center.id)
     .map((m) => ({
       ...mallSummary(m),
-      距離公里: round(haversineKm(center.lat, center.lng, m.lat, m.lng)),
-      定位重疊度: round(positioningOverlap(center, m)),
+      distanceKm: round(haversineKm(center.lat, center.lng, m.lat, m.lng)),
+      positioningOverlap: round(positioningOverlap(center, m)),
     }))
-    .filter((m) => m.距離公里 <= radiusKm)
-    .sort((a, b) => a.距離公里 - b.距離公里);
+    .filter((m) => m.distanceKm <= radiusKm)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
   return {
-    中心: center.name,
-    半徑公里: radiusKm,
-    競品數: competitors.length,
-    競品: competitors,
+    center: center.name,
+    radiusKm: radiusKm,
+    competitorCount: competitors.length,
+    competitors: competitors,
   };
 }
 
@@ -100,18 +100,18 @@ export function getThreatAnalysis(sc: Scenario, nameOrId?: string) {
       const score = overlap * (1 / (1 + dist)) * Math.min(scaleRatio, 2);
       return {
         ...mallSummary(m),
-        距離公里: round(dist),
-        定位重疊度: round(overlap),
-        規模比: round(scaleRatio),
-        綜合威脅分數: round(score),
+        distanceKm: round(dist),
+        positioningOverlap: round(overlap),
+        scaleRatio: round(scaleRatio),
+        threatScore: round(score),
       };
     })
-    .sort((a, b) => b.綜合威脅分數 - a.綜合威脅分數);
+    .sort((a, b) => b.threatScore - a.threatScore);
   return {
-    分析主體: target.name,
-    說明:
+    subject: target.name,
+    note:
       "威脅層級為人工判讀結果；綜合威脅分數 = 定位重疊 × 距離衰減 × 規模因子，僅供相對排序參考（示範資料）",
-    競品威脅: rows,
+    competitorThreats: rows,
   };
 }
 
@@ -155,22 +155,22 @@ export function estimateSalesImpact(sc: Scenario, newEntrantNameOrId?: string) {
     const hi = round(dropPct * 1.3, 1);
     const estVisitLossM = round(m.trafficM * (dropPct / 100), 1);
     return {
-      商場: m.name,
-      開幕前佔比: `${round(b * 100, 1)}%`,
-      開幕後佔比: `${round(a * 100, 1)}%`,
-      客流下滑估計: `${lo}% ~ ${hi}%`,
-      年客流損失估計_百萬人次: estVisitLossM,
+      mall: m.name,
+      shareBefore: `${round(b * 100, 1)}%`,
+      shareAfter: `${round(a * 100, 1)}%`,
+      footfallDropEst: `${lo}% ~ ${hi}%`,
+      annualVisitLossM: estVisitLossM,
     };
   });
 
   return {
-    模型: sc.huffModelLabel,
-    新進入者: `${entrant.name}（${entrant.opened} 開幕）`,
-    警語:
+    model: sc.huffModelLabel,
+    newEntrant: `${entrant.name}（${entrant.opened} 開幕）`,
+    caveat:
       "示範等級粗略估算：未含價格帶、品牌組合、行銷等因子，僅供相對比較，非精準預測",
-    開幕後市佔: `${round(after[entrant.id] * 100, 1)}%（商圈內客流分配佔比）`,
-    各商場影響: impact.sort(
-      (a, b) => b.年客流損失估計_百萬人次 - a.年客流損失估計_百萬人次
+    postOpeningShare: `${round(after[entrant.id] * 100, 1)}%（商圈內客流分配佔比）`,
+    impactByMall: impact.sort(
+      (a, b) => b.annualVisitLossM - a.annualVisitLossM
     ),
   };
 }

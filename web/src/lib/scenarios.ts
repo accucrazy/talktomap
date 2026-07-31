@@ -49,6 +49,8 @@ export interface Scenario {
   locale: Locale;
   /** 本案預設半徑圈（km） */
   defaultRadiusKm: number;
+  /** 半徑滑桿的可調範圍（km） */
+  radiusRange: { min: number; max: number; step: number };
   /** Huff 模型的人流需求節點 */
   demandPoints: DemandPoint[];
   huffModelLabel: string;
@@ -65,42 +67,43 @@ export interface Scenario {
 export const SCENARIOS: Scenario[] = [
   {
     id: "kl-bbcc",
-    label: "吉隆坡 BBCC",
-    areaLabel: "吉隆坡 · Bukit Bintang / TRX",
+    label: "KL BBCC",
+    areaLabel: "Kuala Lumpur · Bukit Bintang / TRX",
     malls: klMalls,
     targetId: KL_TARGET,
     defaultEntrantId: "118-mall",
     center: { lat: 3.1447, lng: 101.7095 },
     zoom: 15,
     region: "MY",
-    language: "zh-TW",
-    locale: "zh-TW",
-    defaultRadiusKm: 0.4,
+    language: "en",
+    locale: "en",
+    defaultRadiusKm: 1.5,
+    radiusRange: { min: 0.3, max: 5, step: 0.1 },
     demandPoints: [
-      { name: "Bukit Bintang 站", lat: 3.146, lng: 101.7113, weight: 0.3 },
-      { name: "Hang Tuah 站", lat: 3.14, lng: 101.706, weight: 0.2 },
-      { name: "TRX 站", lat: 3.142, lng: 101.7183, weight: 0.2 },
-      { name: "Merdeka 站", lat: 3.1419, lng: 101.7022, weight: 0.15 },
-      { name: "Imbi 站", lat: 3.1428, lng: 101.7092, weight: 0.15 },
+      { name: "Bukit Bintang Station", lat: 3.146, lng: 101.7113, weight: 0.3 },
+      { name: "Hang Tuah Station", lat: 3.14, lng: 101.706, weight: 0.2 },
+      { name: "TRX Station", lat: 3.142, lng: 101.7183, weight: 0.2 },
+      { name: "Merdeka Station", lat: 3.1419, lng: 101.7022, weight: 0.15 },
+      { name: "Imbi Station", lat: 3.1428, lng: 101.7092, weight: 0.15 },
     ],
     huffModelLabel:
-      "簡化 Huff 引力模型（吸引力 = 有效面積 / 距離²，5 個人流需求節點加權）",
+      "Simplified Huff gravity model (attraction = effective floor area / distance², weighted across 5 demand nodes)",
     govData: {
       provider: "data.gov.my",
       datasetId: "population_state",
       area: "W.P. Kuala Lumpur",
-      label: "吉隆坡聯邦直轄區 人口結構（DOSM via data.gov.my）",
+      label: "W.P. Kuala Lumpur population structure (DOSM via data.gov.my)",
       sourceUrl: "https://data.gov.my/data-catalogue/population_state",
     },
     greeting:
-      "你好，我是 Talk to Map 商圈分析助理。\n目前載入示範情境：**吉隆坡 Bukit Bintang / TRX 商圈**（本案：LaLaport BBCC）。\n你可以問我競品威脅、半徑掃描、或新商場開幕的客流影響——分析結果會同步標到右側地圖。",
+      "Hello, I'm the Talk to Map trade-area analyst.\nCurrent scenario: **Kuala Lumpur — Bukit Bintang / TRX**, subject: LaLaport BBCC.\nAsk me about competitive threats, radius scans, or the footfall impact of a new mall opening — results are plotted on the map. Use the radius slider to change the analysis catchment.",
     suggestions: [
-      "118 Mall 開幕後，誰受威脅最大？",
-      "以 LaLaport 為中心 1.5 公里內有哪些競品？",
-      "預估 118 Mall 開幕對各商場的客流影響",
-      "用官方人口數據看吉隆坡的商圈潛力",
+      "Who is most threatened once 118 Mall opens?",
+      "Which competitors are within 1.5 km of LaLaport?",
+      "Estimate 118 Mall's footfall impact on each mall",
+      "Show KL trade-area potential from official population data",
     ],
-    systemContext: `目前示範情境：吉隆坡 Bukit Bintang / TRX 商圈，分析主體為 LaLaport BBCC（本案），競品含 118 Mall（2026.8 開幕）、The Exchange TRX、Pavilion KL、Lot 10、Berjaya Times Square。`,
+    systemContext: `Current scenario: Kuala Lumpur Bukit Bintang / TRX trade area. Subject of analysis is LaLaport BBCC (Mitsui Fudosan). Competitors include 118 Mall @ Merdeka 118 (opening 2026.8), The Exchange TRX, Pavilion KL, Lot 10, Berjaya Times Square, Suria KLCC, Fahrenheit 88, The Starhill, Sungei Wang Plaza, NU Sentral, Quill City Mall, Sunway Putra Mall, Mid Valley Megamall and The Gardens Mall. The user can adjust the analysis radius; the comparison table shows only malls inside that radius.`,
   },
   {
     id: "nagoya-esca",
@@ -114,7 +117,8 @@ export const SCENARIOS: Scenario[] = [
     region: "JP",
     language: "ja",
     locale: "ja",
-    defaultRadiusKm: 0.3,
+    defaultRadiusKm: 0.5,
+    radiusRange: { min: 0.1, max: 3, step: 0.1 },
     demandPoints: [
       { name: "新幹線口／太閤通口（西）", lat: 35.1706, lng: 136.8798, weight: 0.28 },
       { name: "桜通口（東）", lat: 35.1712, lng: 136.8825, weight: 0.3 },

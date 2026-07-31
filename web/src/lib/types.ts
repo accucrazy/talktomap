@@ -17,9 +17,12 @@ export type SegmentTag =
 
 export interface Mall {
   id: string;
-  /** 中文名稱 */
+  /** 主要顯示名（依情境語言：KL=英文、名古屋=日文） */
   name: string;
+  /** 次要標籤（英文名／ローマ字） */
   nameEn: string;
+  /** 所在區域（如 "Bukit Bintang"、"KLCC"），列表次要顯示用 */
+  area?: string;
   lat: number;
   lng: number;
   /** 開幕時間（顯示用字串，如 "2026.8"、"1990s"） */

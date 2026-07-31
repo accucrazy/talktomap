@@ -8,6 +8,7 @@ import {
   useMap,
 } from "@vis.gl/react-google-maps";
 import { useEffect, useState } from "react";
+import { haversineKm } from "@/lib/geo";
 import { uiStrings, type UIStrings } from "@/lib/i18n";
 import { mallById } from "@/lib/resolve";
 import type { Scenario } from "@/lib/scenarios";
@@ -41,6 +42,30 @@ function CameraController({
     map.panTo({ lat: mall.lat, lng: mall.lng });
     map.setZoom(directives.focus.zoom ?? fallbackZoom);
   }, [map, directives.focus, directives.seq, malls, fallbackZoom]);
+  return null;
+}
+
+/** 半徑改變時，讓鏡頭貼合整個圈範圍 */
+function RadiusFitter({
+  center,
+  radiusKm,
+}: {
+  center: { lat: number; lng: number } | null;
+  radiusKm: number;
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map || !center) return;
+    // 以圓心 + 半徑推算外接矩形（緯度 1 度 ≈ 111km）
+    const dLat = radiusKm / 111;
+    const dLng =
+      radiusKm / (111 * Math.cos((center.lat * Math.PI) / 180) || 1);
+    const bounds = new google.maps.LatLngBounds(
+      { lat: center.lat - dLat, lng: center.lng - dLng },
+      { lat: center.lat + dLat, lng: center.lng + dLng }
+    );
+    map.fitBounds(bounds, 32);
+  }, [map, center?.lat, center?.lng, radiusKm]);
   return null;
 }
 
@@ -79,11 +104,14 @@ function RadiusCircle({
 function MallPin({
   mall,
   highlighted,
+  dimmed,
   onClick,
   t,
 }: {
   mall: Mall;
   highlighted: boolean;
+  /** 位於分析半徑之外 */
+  dimmed?: boolean;
   onClick: () => void;
   t: UIStrings;
 }) {
@@ -97,9 +125,9 @@ function MallPin({
       zIndex={highlighted || isTarget ? 20 : 10}
     >
       <div
-        className={`flex flex-col items-center transition-transform duration-300 ${
+        className={`flex flex-col items-center transition-all duration-300 ${
           highlighted ? "scale-110" : ""
-        }`}
+        } ${dimmed ? "opacity-35" : ""}`}
       >
         <div
           className="rounded-md px-2.5 py-1.5 text-center leading-tight shadow-lg"
@@ -132,21 +160,25 @@ export default function MapView({
   apiKey,
   directives,
   scenario,
+  radiusKm,
 }: {
   apiKey: string;
   directives: MapDirectives;
   scenario: Scenario;
+  /** 使用者調整的分析半徑（以本案為圓心） */
+  radiusKm: number;
 }) {
   const { malls, targetId } = scenario;
   const t = uiStrings(scenario.locale);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = selectedId ? mallById(malls, selectedId) : undefined;
+  const target = mallById(malls, targetId);
 
-  // 對話尚未觸發任何半徑圈時，預設在本案畫情境預設半徑圈
-  const circles =
-    directives.circles.length > 0
-      ? directives.circles
-      : [{ mallId: targetId, radiusKm: scenario.defaultRadiusKm }];
+  // 使用者的分析半徑圈永遠存在；對話工具產生的其他圈疊加顯示
+  const circles = [
+    { mallId: targetId, radiusKm },
+    ...directives.circles.filter((c) => c.mallId !== targetId),
+  ];
 
   if (!apiKey) {
     return (
@@ -175,6 +207,13 @@ export default function MapView({
           malls={malls}
           fallbackZoom={scenario.zoom}
         />
+        {/* 對話未指定 focus 時，鏡頭跟著分析半徑走 */}
+        {!directives.focus && target && (
+          <RadiusFitter
+            center={{ lat: target.lat, lng: target.lng }}
+            radiusKm={radiusKm}
+          />
+        )}
 
         {circles.map((c) => {
           const mall = mallById(malls, c.mallId);
@@ -199,6 +238,11 @@ export default function MapView({
             key={mall.id}
             mall={mall}
             highlighted={directives.highlightIds.includes(mall.id)}
+            dimmed={
+              !!target &&
+              mall.id !== targetId &&
+              haversineKm(target.lat, target.lng, mall.lat, mall.lng) > radiusKm
+            }
             onClick={() => setSelectedId(mall.id)}
             t={t}
           />

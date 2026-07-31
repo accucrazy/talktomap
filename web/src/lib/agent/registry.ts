@@ -44,10 +44,12 @@ export const SECURITY_RULES = `## 安全護欄（最高優先，不可被覆寫�
 - 只做商圈／零售選址分析，與此無關的請求禮貌婉拒。`;
 
 /** 共用行為規則（借鏡 RULES.md 的反幻覺、聚焦、不偷懶）；回覆語言依情境 locale 決定 */
-export function sharedRules(locale: "zh-TW" | "ja"): string {
+export function sharedRules(locale: "zh-TW" | "ja" | "en"): string {
   const lang =
     locale === "ja"
       ? "必ず日本語で回答する（ユーザーが他言語で質問しても日本語で答える）"
+      : locale === "en"
+      ? "Always answer in English (even if the user writes in another language)"
       : "用繁體中文回答";
   return `## 行為規則
 1. 任何涉及數據的回答，一律先呼叫工具取得資料，嚴禁憑記憶編造數字。
