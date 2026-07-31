@@ -8,23 +8,23 @@ import {
   useMap,
 } from "@vis.gl/react-google-maps";
 import { useEffect, useState } from "react";
-import { mallById, malls, TARGET_MALL_ID } from "@/lib/data/malls";
+import { mallById, malls, targetMall, TARGET_MALL_ID } from "@/lib/data/malls";
 import type { Mall } from "@/lib/types";
 import { THREAT_META } from "./threat";
 
-/** page.tsx 將 MapAction[] 化簡後傳入的地圖指令狀態 */
+/** Map directive state, reduced from MapAction[] in AppShell */
 export interface MapDirectives {
   focus: { mallId: string; zoom?: number } | null;
   highlightIds: string[];
   circles: { mallId: string; radiusKm: number }[];
-  /** 遞增序號，讓相同 focus 也能重新觸發 */
+  /** Incrementing sequence so an identical focus can re-trigger */
   seq: number;
 }
 
-const DEFAULT_CENTER = { lat: 3.1447, lng: 101.7095 };
-const DEFAULT_ZOOM = 15;
+const DEFAULT_CENTER = { lat: 3.141, lng: 101.7085 };
+const DEFAULT_ZOOM = 14;
 
-/** 依指令控制鏡頭 */
+/** Camera control from chat directives */
 function CameraController({ directives }: { directives: MapDirectives }) {
   const map = useMap();
   useEffect(() => {
@@ -37,7 +37,34 @@ function CameraController({ directives }: { directives: MapDirectives }) {
   return null;
 }
 
-/** 半徑圈（google.maps.Circle 無 React 封裝，命令式建立） */
+/**
+ * The main analysis radius circle, centered on the subject mall.
+ * Fits the map to the circle whenever the radius changes.
+ */
+function AnalysisRadius({ radiusKm }: { radiusKm: number }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    const t = targetMall();
+    const circle = new google.maps.Circle({
+      map,
+      center: { lat: t.lat, lng: t.lng },
+      radius: radiusKm * 1000,
+      strokeColor: "#d81b60",
+      strokeOpacity: 0.85,
+      strokeWeight: 2,
+      fillColor: "#d81b60",
+      fillOpacity: 0.08,
+      clickable: false,
+    });
+    const bounds = circle.getBounds();
+    if (bounds) map.fitBounds(bounds, 48);
+    return () => circle.setMap(null);
+  }, [map, radiusKm]);
+  return null;
+}
+
+/** A radius circle from a chat directive (imperative, no React wrapper) */
 function RadiusCircle({
   lat,
   lng,
@@ -68,14 +95,16 @@ function RadiusCircle({
   return null;
 }
 
-/** 商場標籤圖釘（仿截圖的紅底名牌） */
+/** Mall label pin (red name badge, per the reference screenshot) */
 function MallPin({
   mall,
   highlighted,
+  dimmed,
   onClick,
 }: {
   mall: Mall;
   highlighted: boolean;
+  dimmed: boolean;
   onClick: () => void;
 }) {
   const meta = THREAT_META[mall.threatLevel];
@@ -87,9 +116,9 @@ function MallPin({
       zIndex={highlighted || isTarget ? 20 : 10}
     >
       <div
-        className={`flex flex-col items-center transition-transform duration-300 ${
+        className={`flex flex-col items-center transition-all duration-300 ${
           highlighted ? "scale-110" : ""
-        }`}
+        } ${dimmed ? "opacity-40" : "opacity-100"}`}
       >
         <div
           className="rounded-md px-2.5 py-1.5 text-center leading-tight shadow-lg"
@@ -101,16 +130,16 @@ function MallPin({
         >
           <div className="text-[13px] font-bold text-white">{mall.name}</div>
           <div className="text-[11px] font-medium text-white/90">
-            {mall.nameEn}
+            {mall.area}
           </div>
         </div>
-        <div className="flex items-center gap-1 mt-1 rounded-full bg-white/95 px-2 py-0.5 shadow">
+        <div className="mt-1 flex items-center gap-1 rounded-full bg-white/95 px-2 py-0.5 shadow">
           <span
             className="inline-block h-2.5 w-2.5 rounded-full"
             style={{ background: meta.color }}
           />
           <span className="text-[11px] font-bold" style={{ color: meta.color }}>
-            {isTarget ? "本案" : `威脅${meta.label}`}
+            {isTarget ? "Subject" : `Threat: ${meta.label}`}
           </span>
         </div>
       </div>
@@ -121,29 +150,28 @@ function MallPin({
 export default function MapView({
   apiKey,
   directives,
+  radiusKm,
+  visibleIds,
 }: {
   apiKey: string;
   directives: MapDirectives;
+  radiusKm: number;
+  /** Ids of malls inside the current radius (others are dimmed) */
+  visibleIds: Set<string>;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selected = selectedId ? mallById(selectedId) : undefined;
 
-  // 對話尚未觸發任何半徑圈時，預設在本案畫 0.4km 圈（對應截圖粉紅圈）
-  const circles =
-    directives.circles.length > 0
-      ? directives.circles
-      : [{ mallId: TARGET_MALL_ID, radiusKm: 0.4 }];
-
   if (!apiKey) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-gray-500">
-        尚未設定 GOOGLE_MAPS_API_KEY
+        GOOGLE_MAPS_API_KEY is not set
       </div>
     );
   }
 
   return (
-    <APIProvider apiKey={apiKey} language="zh-TW" region="MY">
+    <APIProvider apiKey={apiKey} language="en" region="MY">
       <Map
         mapId="DEMO_MAP_ID"
         defaultCenter={DEFAULT_CENTER}
@@ -156,8 +184,9 @@ export default function MapView({
         className="h-full w-full"
       >
         <CameraController directives={directives} />
+        <AnalysisRadius radiusKm={radiusKm} />
 
-        {circles.map((c) => {
+        {directives.circles.map((c) => {
           const mall = mallById(c.mallId);
           if (!mall) return null;
           const color =
@@ -180,6 +209,9 @@ export default function MapView({
             key={mall.id}
             mall={mall}
             highlighted={directives.highlightIds.includes(mall.id)}
+            dimmed={
+              mall.id !== TARGET_MALL_ID && !visibleIds.has(mall.id)
+            }
             onClick={() => setSelectedId(mall.id)}
           />
         ))}
@@ -195,13 +227,13 @@ export default function MapView({
               <div className="mb-1 text-sm font-bold text-gray-900">
                 {selected.name}{" "}
                 <span className="font-medium text-gray-500">
-                  {selected.nameEn}
+                  {selected.area}
                 </span>
               </div>
               <div className="mb-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-gray-600">
-                <span>開幕 {selected.opened}</span>
+                <span>Opened {selected.opened}</span>
                 <span>{selected.sizeLabel}</span>
-                <span>年人流 {selected.trafficLabel}</span>
+                <span>{selected.trafficLabel}</span>
               </div>
               <ul className="ml-4 list-disc space-y-0.5 text-xs text-gray-700">
                 {selected.positioning.map((p) => (

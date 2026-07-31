@@ -1,50 +1,51 @@
-// 共用型別定義
+// Shared type definitions
 
-/** 威脅層級：target = 本案（分析主體）、extreme/high/medium/low = 競品對本案的威脅程度 */
+/** Threat level: target = the subject mall; extreme/high/medium/low = a competitor's threat to the subject */
 export type ThreatLevel = "target" | "extreme" | "high" | "medium" | "low";
 
-/** 客群/定位標籤，用於計算定位重疊度 */
+/** Customer / positioning segment tags, used to compute positioning overlap */
 export type SegmentTag =
-  | "luxury" // 奢侈品
-  | "premium" // 高端
-  | "mass" // 大眾
-  | "family" // 家庭
-  | "youth" // 年輕客群
-  | "japanese" // 日系主題
-  | "food" // 美食導向
-  | "tourist" // 觀光客
-  | "themepark"; // 室內樂園
+  | "luxury"
+  | "premium"
+  | "mass"
+  | "family"
+  | "youth"
+  | "japanese"
+  | "food"
+  | "tourist"
+  | "themepark";
 
 export interface Mall {
   id: string;
-  /** 中文名稱 */
+  /** English mall name (primary display) */
   name: string;
-  nameEn: string;
+  /** District / area subtitle, e.g. "Bukit Bintang", "TRX" */
+  area: string;
   lat: number;
   lng: number;
-  /** 開幕時間（顯示用字串，如 "2026.8"、"1990s"） */
+  /** Opening date display string, e.g. "2026.8", "1990s" */
   opened: string;
-  /** 規模顯示字串，如 "1.3M sf / 400+ 店" */
+  /** Size display string, e.g. "1.3M sf / 400+ stores" */
   sizeLabel: string;
-  /** 供模型計算用的有效商業面積（平方英尺） */
+  /** Effective retail area (sq ft) used by the models */
   modelSf: number;
-  /** 年人流顯示字串 */
+  /** Annual footfall display string */
   trafficLabel: string;
-  /** 供模型計算用的年人流估計（百萬人次；未公開者為估算值） */
+  /** Annual footfall estimate (millions of visits) used by the models */
   trafficM: number;
-  /** 核心定位描述（bullet points） */
+  /** Core positioning bullet points */
   positioning: string[];
-  /** 定位短標籤，如「高端主流」 */
+  /** Short positioning tag, e.g. "Premium mainstream" */
   positioningTag: string;
-  /** 客群標籤（計算定位重疊度用） */
+  /** Segment tags (for positioning-overlap calculation) */
   segments: SegmentTag[];
-  /** 對本案的威脅層級 */
+  /** Threat level toward the subject mall */
   threatLevel: ThreatLevel;
-  /** 威脅層級註解，如「同層競爭」「已分眾」 */
+  /** Threat note, e.g. "Head-to-head", "Already segmented" */
   threatNote: string;
 }
 
-/** Chat 回覆附帶的地圖動作，前端據此操作地圖 */
+/** Map actions carried by a chat reply; the frontend applies them to the map */
 export type MapAction =
   | { type: "focus"; mallId: string; zoom?: number }
   | { type: "highlight"; mallIds: string[] }
@@ -59,6 +60,6 @@ export interface ChatMessage {
 export interface ChatResponse {
   reply: string;
   mapActions: MapAction[];
-  /** 本輪呼叫過的分析工具（顯示於 UI 供透明化） */
+  /** Analysis tools invoked this turn (surfaced in the UI for transparency) */
   toolsUsed: string[];
 }

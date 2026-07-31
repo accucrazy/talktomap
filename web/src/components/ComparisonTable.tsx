@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { malls } from "@/lib/data/malls";
+import {
+  distanceFromTargetKm,
+  mallsWithinRadius,
+  TARGET_MALL_ID,
+} from "@/lib/data/malls";
 import type { Mall } from "@/lib/types";
 import { THREAT_META } from "./threat";
 
@@ -21,11 +25,18 @@ function ThreatCell({ mall }: { mall: Mall }) {
 }
 
 export default function ComparisonTable({
+  radiusKm,
   onSelectMall,
 }: {
+  radiusKm: number;
   onSelectMall: (mallId: string) => void;
 }) {
   const [open, setOpen] = useState(true);
+
+  const rows = mallsWithinRadius(radiusKm).sort(
+    (a, b) => distanceFromTargetKm(a) - distanceFromTargetKm(b)
+  );
+  const competitorCount = rows.filter((m) => m.id !== TARGET_MALL_ID).length;
 
   return (
     <div className="pointer-events-auto overflow-hidden rounded-t-xl border border-b-0 border-red-200 bg-white/97 shadow-[0_-4px_20px_rgba(0,0,0,0.12)] backdrop-blur">
@@ -35,31 +46,33 @@ export default function ComparisonTable({
         className="flex w-full items-center justify-between bg-brand px-4 py-2 text-left"
       >
         <span className="text-sm font-bold text-white">
-          商場競爭比較表
-          <span className="ml-2 text-xs font-medium text-white/75">
-            點列可定位地圖
+          Mall Competition Comparison
+          <span className="ml-2 text-xs font-medium text-white/80">
+            within {radiusKm.toFixed(1)} km · {competitorCount} competitor
+            {competitorCount === 1 ? "" : "s"} · click a row to locate
           </span>
         </span>
         <span className="text-xs font-bold text-white/90">
-          {open ? "收合 ▾" : "展開 ▴"}
+          {open ? "Collapse ▾" : "Expand ▴"}
         </span>
       </button>
 
       {open && (
         <div className="max-h-[38vh] overflow-auto">
-          <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[900px] border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10">
               <tr className="bg-[#f37878] text-white">
-                <th className="px-3 py-2 font-bold">商場</th>
-                <th className="px-3 py-2 font-bold">開幕</th>
-                <th className="px-3 py-2 font-bold">規模</th>
-                <th className="px-3 py-2 font-bold">年人流</th>
-                <th className="px-3 py-2 font-bold">核心定位</th>
-                <th className="px-3 py-2 font-bold">威脅層級</th>
+                <th className="px-3 py-2 font-bold">Mall</th>
+                <th className="px-3 py-2 font-bold">Dist.</th>
+                <th className="px-3 py-2 font-bold">Opened</th>
+                <th className="px-3 py-2 font-bold">Size</th>
+                <th className="px-3 py-2 font-bold">Annual footfall</th>
+                <th className="px-3 py-2 font-bold">Core positioning</th>
+                <th className="px-3 py-2 font-bold">Threat level</th>
               </tr>
             </thead>
             <tbody>
-              {malls.map((mall, i) => (
+              {rows.map((mall, i) => (
                 <tr
                   key={mall.id}
                   onClick={() => onSelectMall(mall.id)}
@@ -69,9 +82,16 @@ export default function ComparisonTable({
                 >
                   <td className="px-3 py-2.5">
                     <div className="font-bold text-brand-dark">{mall.name}</div>
-                    <div className="text-xs text-gray-500">{mall.nameEn}</div>
+                    <div className="text-xs text-gray-500">{mall.area}</div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2.5">{mall.opened}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-gray-600">
+                    {mall.id === TARGET_MALL_ID
+                      ? "—"
+                      : `${distanceFromTargetKm(mall).toFixed(2)} km`}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5">
+                    {mall.opened}
+                  </td>
                   <td className="whitespace-nowrap px-3 py-2.5">
                     {mall.sizeLabel}
                   </td>

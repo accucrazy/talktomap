@@ -4,22 +4,22 @@ import { useEffect, useRef, useState } from "react";
 import type { ChatMessage, ChatResponse, MapAction } from "@/lib/types";
 
 const SUGGESTIONS = [
-  "118 Mall 開幕後，誰受威脅最大？",
-  "以 LaLaport 為中心 1.5 公里內有哪些競品？",
-  "預估 118 Mall 開幕對各商場的客流影響",
+  "After 118 Mall opens, who is most at risk?",
+  "Which competitors are within 1.5 km of LaLaport?",
+  "Estimate 118 Mall's footfall impact on each mall",
 ];
 
 const TOOL_LABELS: Record<string, string> = {
-  list_malls: "商場清單",
-  get_mall: "商場資料",
-  get_competitors_near: "競品掃描",
-  get_threat_analysis: "威脅分析",
-  estimate_sales_impact: "客流影響模型",
+  list_malls: "Mall list",
+  get_mall: "Mall details",
+  get_competitors_near: "Competitor scan",
+  get_threat_analysis: "Threat analysis",
+  estimate_sales_impact: "Footfall impact model",
 };
 
 const WELCOME: ChatMessage = {
   role: "model",
-  text: "你好，我是 Talk to Map 商圈分析助理。\n目前載入示範情境：**吉隆坡 Bukit Bintang / TRX 商圈**（本案：LaLaport BBCC）。\n你可以問我競品威脅、半徑掃描、或新商場開幕的客流影響——分析結果會同步標到右側地圖。",
+  text: "Hi, I'm the Talk to Map trade-area analyst.\nLoaded demo scenario: **Kuala Lumpur city centre (Bukit Bintang / TRX)** — subject: LaLaport BBCC.\nAsk me about competitor threats, radius scans, or a new mall's footfall impact — results are plotted on the map to the right.",
 };
 
 /** 極簡 markdown：**粗體** 與「- 」清單 */
@@ -108,7 +108,7 @@ export default function ChatPanel({
         ...prev,
         {
           role: "model",
-          text: `分析失敗：${e instanceof Error ? e.message : "未知錯誤"}，請再試一次。`,
+          text: `Analysis failed: ${e instanceof Error ? e.message : "unknown error"}. Please try again.`,
         },
       ]);
     } finally {
@@ -148,7 +148,7 @@ export default function ChatPanel({
         {loading && (
           <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-red-100 bg-brand-pink/60 px-3.5 py-2.5 text-[13px] text-gray-500 w-fit">
             <span className="inline-block h-2 w-2 animate-ping rounded-full bg-brand" />
-            分析中（呼叫工具查詢資料）…
+            Analyzing (querying tools)…
           </div>
         )}
       </div>
@@ -179,7 +179,7 @@ export default function ChatPanel({
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="問我商圈競爭、人流影響…"
+          placeholder="Ask about competition, footfall impact…"
           className="flex-1 rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-brand"
         />
         <button
@@ -187,7 +187,7 @@ export default function ChatPanel({
           disabled={loading || !input.trim()}
           className="rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-dark disabled:opacity-40"
         >
-          送出
+          Send
         </button>
       </form>
     </div>
