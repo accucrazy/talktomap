@@ -25,7 +25,7 @@ export const malls: Mall[] = [
     trafficM: 15,
     positioning: [
       "Mitsui Fudosan's first LaLaport in Southeast Asia",
-      "Japanese family positioning with large Nitori / Tsutaya Books anchors",
+      "Japanese family positioning; BookXcess (L1-13A & 13B) and Nitori as anchors",
       "Core retail of the BBCC mixed-use development",
     ],
     positioningTag: "Japanese family",
