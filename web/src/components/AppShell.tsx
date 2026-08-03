@@ -167,10 +167,10 @@ export default function AppShell({ mapsApiKey }: { mapsApiKey: string }) {
       {/* 主區：左對話 / 右地圖（行動版上下堆疊，地圖在上） */}
       <main className="flex min-h-0 flex-1 flex-col-reverse md:flex-row">
         <aside
-          className="h-[45dvh] w-full shrink-0 border-t border-red-100 md:h-auto md:border-t-0"
+          className="h-[45dvh] w-full shrink-0 border-t border-red-100 md:h-auto md:w-[var(--chat-w)] md:border-t-0"
           style={{ ["--chat-w" as string]: `${chatWidth}px` }}
         >
-          <div className="h-full w-full md:w-[var(--chat-w)]">
+          <div className="h-full w-full">
             <ChatPanel scenario={scenario} onMapActions={applyMapActions} />
           </div>
         </aside>
@@ -185,7 +185,8 @@ export default function AppShell({ mapsApiKey }: { mapsApiKey: string }) {
           <span className="h-8 w-0.5 rounded-full bg-brand/40 transition-colors group-hover:bg-brand" />
         </div>
 
-        <section className="relative min-h-0 flex-1">
+        {/* min-w-0 讓 flex 子元素能正常收縮，避免對話欄把地圖擠成 0 寬 */}
+        <section className="relative min-h-0 min-w-0 flex-1">
           <MapView
             apiKey={mapsApiKey}
             directives={directives}
