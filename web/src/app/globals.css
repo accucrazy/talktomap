@@ -13,6 +13,13 @@
   --threat-medium: #f1c40f;
   --threat-low: #27ae60;
   --threat-target: #d81b60;
+  /* BOW 封閉式電商 mock-up 專用（精品調性：墨黑／象牙白／金） */
+  --bow-ink: #101012;
+  --bow-slate: #2a2b30;
+  --bow-ivory: #f7f4ef;
+  --bow-gold: #b8964f;
+  --bow-gold-soft: #e3d3ac;
+  --bow-line: #06c755;
 }
 
 @theme inline {
@@ -26,6 +33,12 @@
   --color-threat-medium: var(--threat-medium);
   --color-threat-low: var(--threat-low);
   --color-threat-target: var(--threat-target);
+  --color-bow-ink: var(--bow-ink);
+  --color-bow-slate: var(--bow-slate);
+  --color-bow-ivory: var(--bow-ivory);
+  --color-bow-gold: var(--bow-gold);
+  --color-bow-gold-soft: var(--bow-gold-soft);
+  --color-bow-line: var(--bow-line);
   --font-sans: var(--font-noto-sans-tc);
 }
 
